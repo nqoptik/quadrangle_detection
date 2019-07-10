@@ -22,6 +22,11 @@ cv::Point intersectPoint(cv::Point, cv::Point, cv::Point, cv::Point);
 
 int main(int argc, char** argv)
 {
+    if (argc != 2)
+    {
+        printf("To run quadrangle_detection, type ./quadrangle_detection <video_file>\n");
+        return 1;
+    }
     cv::VideoCapture cap(argv[1]);
 
     if (!cap.isOpened())
