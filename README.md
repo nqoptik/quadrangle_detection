@@ -1,5 +1,5 @@
-# Rectangle detection
-A simple rectangle detection implementation.
+# Quangrangle detection
+A simple quadrangle detection implementation.
 
 ## Build project
 Build project with cmake:
@@ -13,10 +13,10 @@ make
 ## Run project
 Copy test data to build folder:
 ```
-cp -r ../../../computer_vision_basics_data/card_detection/build/* .
+cp -r ../../computer_vision_basics_data/quadrangle_detection/build/* .
 ```
 
 Run card detection:
 ```
-./card_detection <video_file>
+./quadrangle_detection <video_file>
 ```
