@@ -5,20 +5,20 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-void quadDetection(cv::Mat, std::vector<cv::Vec8i>&);
-void simplifyContours(int, std::vector<std::vector<cv::Point>>&);
-bool findQuadrangleInContour(cv::Mat, std::vector<cv::Point>, cv::Vec8i&);
-void simplifyLines(cv::Mat, std::vector<cv::Vec4i>&);
-void sortLines(std::vector<cv::Vec4i>&);
-void pickLines(std::vector<cv::Vec4i>&);
-bool findIntersects(std::vector<cv::Vec4i>, cv::Vec8i&);
-int scalarProduct(cv::Point, cv::Point, cv::Point, cv::Point);
-float EuclidDistancef(cv::Point, cv::Point);
-int EuclidDistanced(cv::Point, cv::Point);
-float cosTwoLines(cv::Point, cv::Point, cv::Point, cv::Point);
-int triagleArea(cv::Point, cv::Point, cv::Point);
-int quadrangleArea(cv::Point, cv::Point, cv::Point, cv::Point);
-cv::Point intersectPoint(cv::Point, cv::Point, cv::Point, cv::Point);
+void detect_quadrangles(cv::Mat image, std::vector<cv::Vec8i>& quadrangles);
+void simplify_contours(int minArea, std::vector<std::vector<cv::Point>>& contours);
+bool get_quadrangle_from_contours(cv::Mat image, std::vector<cv::Point> contour, cv::Vec8i& edges);
+void simplify_lines(cv::Mat image, std::vector<cv::Vec4i>& lines);
+void sort_lines(std::vector<cv::Vec4i>& lines);
+void pick_lines(std::vector<cv::Vec4i>& lines);
+bool get_quadrangle_corners(std::vector<cv::Vec4i> lines, cv::Vec8i& intersects);
+int get_scalar_product(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2);
+float get_euclid_distance_float(cv::Point p1, cv::Point p2);
+int get_euclid_distance_int(cv::Point p1, cv::Point p2);
+float get_cos_two_lines(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2);
+int get_triagle_area(cv::Point p1, cv::Point p2, cv::Point p3);
+int get_quadrangle_area(cv::Point p1, cv::Point p2, cv::Point p3, cv::Point p4);
+cv::Point get_intersection(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2);
 
 int main(int argc, char** argv)
 {
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
         cv::resize(orgImg, orgImg, cv::Size(400, round(orgImg.rows / rate)));
 
         std::vector<cv::Vec8i> quadrangles;
-        quadDetection(resizeImg, quadrangles);
+        detect_quadrangles(resizeImg, quadrangles);
 
         cv::Mat outImg = orgImg.clone();
 
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void quadDetection(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
+void detect_quadrangles(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
 {
     cv::Mat hsvImg;
     cv::cvtColor(image, hsvImg, CV_BGR2HSV);
@@ -96,7 +96,7 @@ void quadDetection(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
     cv::findContours(hueImg, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     ///Remove noise contours
-    simplifyContours(2000, contours);
+    simplify_contours(2000, contours);
 
     cv::Mat contoursImg = cv::Mat::zeros(hueImg.size(), CV_8UC1);
 
@@ -104,14 +104,14 @@ void quadDetection(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
     for (unsigned int i = 0; i < contours.size(); i++)
     {
         cv::Vec8i edges;
-        if (findQuadrangleInContour(contoursImg, contours[i], edges))
+        if (get_quadrangle_from_contours(contoursImg, contours[i], edges))
         {
             quadrangles.push_back(edges);
         }
     }
 }
 
-void simplifyContours(int minArea, std::vector<std::vector<cv::Point>>& contours)
+void simplify_contours(int minArea, std::vector<std::vector<cv::Point>>& contours)
 {
     for (unsigned int i = 0; i < contours.size(); i++)
     {
@@ -123,7 +123,7 @@ void simplifyContours(int minArea, std::vector<std::vector<cv::Point>>& contours
     }
 }
 
-bool findQuadrangleInContour(cv::Mat image, std::vector<cv::Point> contour, cv::Vec8i& edges)
+bool get_quadrangle_from_contours(cv::Mat image, std::vector<cv::Point> contour, cv::Vec8i& edges)
 {
     cv::Mat contourImg = cv::Mat::zeros(image.size(), CV_8UC1);
 
@@ -137,13 +137,13 @@ bool findQuadrangleInContour(cv::Mat image, std::vector<cv::Point> contour, cv::
     std::vector<cv::Vec4i> lines;
     cv::HoughLinesP(contourImg, lines, 1, CV_PI / 180, 20, 20, 15);
 
-    simplifyLines(contourImg, lines);
+    simplify_lines(contourImg, lines);
 
     ///sort lines by length
-    sortLines(lines);
+    sort_lines(lines);
 
     ///pick 4 best lines
-    pickLines(lines);
+    pick_lines(lines);
 
     if (lines.size() != 4)
     {
@@ -152,7 +152,7 @@ bool findQuadrangleInContour(cv::Mat image, std::vector<cv::Point> contour, cv::
 
     cv::Vec8i intersects;
 
-    if (findIntersects(lines, intersects))
+    if (get_quadrangle_corners(lines, intersects))
     {
         edges = intersects;
     }
@@ -164,7 +164,7 @@ bool findQuadrangleInContour(cv::Mat image, std::vector<cv::Point> contour, cv::
     return true;
 }
 
-void simplifyLines(cv::Mat image, std::vector<cv::Vec4i>& lines)
+void simplify_lines(cv::Mat image, std::vector<cv::Vec4i>& lines)
 {
     for (unsigned int i = 0; i < lines.size(); i++)
     {
@@ -196,13 +196,13 @@ void simplifyLines(cv::Mat image, std::vector<cv::Vec4i>& lines)
     }
 }
 
-void sortLines(std::vector<cv::Vec4i>& lines)
+void sort_lines(std::vector<cv::Vec4i>& lines)
 {
     std::vector<int> dLines;
 
     for (unsigned int i = 0; i < lines.size(); i++)
     {
-        dLines.push_back(EuclidDistanced(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3])));
+        dLines.push_back(get_euclid_distance_int(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3])));
     }
     std::vector<cv::Vec4i> sortedLines;
 
@@ -232,20 +232,20 @@ void sortLines(std::vector<cv::Vec4i>& lines)
     lines = sortedLines;
 }
 
-void pickLines(std::vector<cv::Vec4i>& lines)
+void pick_lines(std::vector<cv::Vec4i>& lines)
 {
     for (unsigned int i = 0; i < lines.size(); i++)
     {
         bool have = false;
         for (unsigned int j = i + 1; j < lines.size(); j++)
         {
-            float cosTL = cosTwoLines(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3]), cv::Point(lines[j][0], lines[j][1]), cv::Point(lines[j][2], lines[j][3]));
+            float cosTL = get_cos_two_lines(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3]), cv::Point(lines[j][0], lines[j][1]), cv::Point(lines[j][2], lines[j][3]));
 
             if (cosTL > 0.8f || cosTL < -0.8f)
             {
                 if (!have)
                 {
-                    int area = quadrangleArea(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3]), cv::Point(lines[j][0], lines[j][1]), cv::Point(lines[j][2], lines[j][3]));
+                    int area = get_quadrangle_area(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3]), cv::Point(lines[j][0], lines[j][1]), cv::Point(lines[j][2], lines[j][3]));
 
                     if (area > 2000)
                     {
@@ -267,7 +267,7 @@ void pickLines(std::vector<cv::Vec4i>& lines)
     }
 }
 
-bool findIntersects(std::vector<cv::Vec4i> lines, cv::Vec8i& intersects)
+bool get_quadrangle_corners(std::vector<cv::Vec4i> lines, cv::Vec8i& intersects)
 {
     cv::Point line1_p1 = cv::Point(lines[0][0], lines[0][1]);
     cv::Point line1_p2 = cv::Point(lines[0][2], lines[0][3]);
@@ -278,32 +278,32 @@ bool findIntersects(std::vector<cv::Vec4i> lines, cv::Vec8i& intersects)
     cv::Point line4_p1 = cv::Point(lines[3][0], lines[3][1]);
     cv::Point line4_p2 = cv::Point(lines[3][2], lines[3][3]);
 
-    float cosTL12 = cosTwoLines(line1_p1, line1_p2, line2_p1, line2_p2);
-    float cosTL13 = cosTwoLines(line1_p1, line1_p2, line3_p1, line3_p2);
-    float cosTL14 = cosTwoLines(line1_p1, line1_p2, line4_p1, line4_p2);
+    float cosTL12 = get_cos_two_lines(line1_p1, line1_p2, line2_p1, line2_p2);
+    float cosTL13 = get_cos_two_lines(line1_p1, line1_p2, line3_p1, line3_p2);
+    float cosTL14 = get_cos_two_lines(line1_p1, line1_p2, line4_p1, line4_p2);
 
     std::vector<cv::Point> inters;
 
     if (cosTL12 > 0.8f || cosTL12 < -0.8f)
     {
-        inters.push_back(intersectPoint(line1_p1, line1_p2, line3_p1, line3_p2));
-        inters.push_back(intersectPoint(line1_p1, line1_p2, line4_p1, line4_p2));
-        inters.push_back(intersectPoint(line2_p1, line2_p2, line3_p1, line3_p2));
-        inters.push_back(intersectPoint(line2_p1, line2_p2, line4_p1, line4_p2));
+        inters.push_back(get_intersection(line1_p1, line1_p2, line3_p1, line3_p2));
+        inters.push_back(get_intersection(line1_p1, line1_p2, line4_p1, line4_p2));
+        inters.push_back(get_intersection(line2_p1, line2_p2, line3_p1, line3_p2));
+        inters.push_back(get_intersection(line2_p1, line2_p2, line4_p1, line4_p2));
     }
     else if (cosTL13 > 0.8f || cosTL13 < -0.8f)
     {
-        inters.push_back(intersectPoint(line1_p1, line1_p2, line2_p1, line2_p2));
-        inters.push_back(intersectPoint(line1_p1, line1_p2, line4_p1, line4_p2));
-        inters.push_back(intersectPoint(line3_p1, line3_p2, line2_p1, line2_p2));
-        inters.push_back(intersectPoint(line3_p1, line3_p2, line4_p1, line4_p2));
+        inters.push_back(get_intersection(line1_p1, line1_p2, line2_p1, line2_p2));
+        inters.push_back(get_intersection(line1_p1, line1_p2, line4_p1, line4_p2));
+        inters.push_back(get_intersection(line3_p1, line3_p2, line2_p1, line2_p2));
+        inters.push_back(get_intersection(line3_p1, line3_p2, line4_p1, line4_p2));
     }
     else if (cosTL14 > 0.8f || cosTL14 < -0.8f)
     {
-        inters.push_back(intersectPoint(line1_p1, line1_p2, line2_p1, line2_p2));
-        inters.push_back(intersectPoint(line1_p1, line1_p2, line3_p1, line3_p2));
-        inters.push_back(intersectPoint(line4_p1, line4_p2, line2_p1, line2_p2));
-        inters.push_back(intersectPoint(line4_p1, line4_p2, line3_p1, line3_p2));
+        inters.push_back(get_intersection(line1_p1, line1_p2, line2_p1, line2_p2));
+        inters.push_back(get_intersection(line1_p1, line1_p2, line3_p1, line3_p2));
+        inters.push_back(get_intersection(line4_p1, line4_p2, line2_p1, line2_p2));
+        inters.push_back(get_intersection(line4_p1, line4_p2, line3_p1, line3_p2));
     }
     else
     {
@@ -323,51 +323,51 @@ bool findIntersects(std::vector<cv::Vec4i> lines, cv::Vec8i& intersects)
     return true;
 }
 
-int scalarProduct(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2)
+int get_scalar_product(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2)
 {
     cv::Point v1 = line1_p2 - line1_p1;
     cv::Point v2 = line2_p2 - line2_p1;
     return v1.x * v2.x + v1.y * v2.y;
 }
 
-float EuclidDistancef(cv::Point p1, cv::Point p2)
+float get_euclid_distance_float(cv::Point p1, cv::Point p2)
 {
     int dx = p2.x - p1.x;
     int dy = p2.y - p1.y;
     return sqrtf((float)(dx * dx + dy * dy));
 }
 
-float cosTwoLines(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2)
+float get_cos_two_lines(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2)
 {
-    float upper = (float)scalarProduct(line1_p1, line1_p2, line2_p1, line2_p2);
-    float under = EuclidDistancef(line1_p1, line1_p2) * EuclidDistancef(line2_p1, line2_p2);
+    float upper = (float)get_scalar_product(line1_p1, line1_p2, line2_p1, line2_p2);
+    float under = get_euclid_distance_float(line1_p1, line1_p2) * get_euclid_distance_float(line2_p1, line2_p2);
     return upper / under;
 }
 
-int EuclidDistanced(cv::Point p1, cv::Point p2)
+int get_euclid_distance_int(cv::Point p1, cv::Point p2)
 {
     int dx = p2.x - p1.x;
     int dy = p2.y - p1.y;
     return round(sqrtf((float)(dx * dx + dy * dy)));
 }
 
-int triagleArea(cv::Point p1, cv::Point p2, cv::Point p3)
+int get_triagle_area(cv::Point p1, cv::Point p2, cv::Point p3)
 {
-    int a = EuclidDistanced(p1, p2);
-    int b = EuclidDistanced(p2, p3);
-    int c = EuclidDistanced(p3, p1);
+    int a = get_euclid_distance_int(p1, p2);
+    int b = get_euclid_distance_int(p2, p3);
+    int c = get_euclid_distance_int(p3, p1);
     int upper = round(sqrtf((float)(a + b + c) * (a + b - c) * (a + c - b) * (b + c - a)));
     return upper / 4;
 }
 
-int quadrangleArea(cv::Point p1, cv::Point p2, cv::Point p3, cv::Point p4)
+int get_quadrangle_area(cv::Point p1, cv::Point p2, cv::Point p3, cv::Point p4)
 {
-    int s1 = triagleArea(p1, p2, p3);
-    int s2 = triagleArea(p1, p3, p4);
+    int s1 = get_triagle_area(p1, p2, p3);
+    int s2 = get_triagle_area(p1, p3, p4);
     return s1 + s2;
 }
 
-cv::Point intersectPoint(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2)
+cv::Point get_intersection(cv::Point line1_p1, cv::Point line1_p2, cv::Point line2_p1, cv::Point line2_p2)
 {
     cv::Point v1 = line1_p2 - line1_p1;
     cv::Point v2 = line2_p2 - line2_p1;
