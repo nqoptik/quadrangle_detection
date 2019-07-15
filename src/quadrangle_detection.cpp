@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 
         cv::Mat output_image = original_image.clone();
         cv::resize(output_image, output_image, cv::Size(output_image.cols * 2, output_image.rows * 2));
-        for (unsigned int i = 0; i < quadrangles.size(); i++)
+        for (unsigned int i = 0; i < quadrangles.size(); ++i)
         {
             cv::line(output_image, cv::Point(2 * quadrangles[i][0], 2 * quadrangles[i][1]), cv::Point(2 * quadrangles[i][2], 2 * quadrangles[i][3]), cv::Scalar(0, 0, 255), 2, 8, 0);
             cv::line(output_image, cv::Point(2 * quadrangles[i][2], 2 * quadrangles[i][3]), cv::Point(2 * quadrangles[i][4], 2 * quadrangles[i][5]), cv::Scalar(0, 0, 255), 2, 8, 0);
@@ -95,7 +95,7 @@ void detect_quadrangles(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
 
     ///find quadrangle in each contour
     cv::Mat contours_image = cv::Mat::zeros(hue_image.size(), CV_8UC1);
-    for (unsigned int i = 0; i < contours.size(); i++)
+    for (unsigned int i = 0; i < contours.size(); ++i)
     {
         cv::Vec8i edges;
         if (get_quadrangle_from_contours(contours_image, contours[i], edges))
@@ -107,7 +107,7 @@ void detect_quadrangles(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
 
 void simplify_contours(int mininium_area, std::vector<std::vector<cv::Point>>& contours)
 {
-    for (unsigned int i = 0; i < contours.size(); i++)
+    for (unsigned int i = 0; i < contours.size(); ++i)
     {
         if (cv::contourArea(contours[i]) < mininium_area)
         {
@@ -121,7 +121,7 @@ bool get_quadrangle_from_contours(cv::Mat image, std::vector<cv::Point> contour,
 {
     cv::Mat contours_image = cv::Mat::zeros(image.size(), CV_8UC1);
 
-    for (unsigned int i = 0; i < contour.size() - 1; i++)
+    for (unsigned int i = 0; i < contour.size() - 1; ++i)
     {
         cv::line(contours_image, contour[i], contour[i + 1], 255, 1, 8, 0);
     }
@@ -162,7 +162,7 @@ bool get_quadrangle_from_contours(cv::Mat image, std::vector<cv::Point> contour,
 
 void simplify_lines(cv::Mat image, std::vector<cv::Vec4i>& lines)
 {
-    for (unsigned int i = 0; i < lines.size(); i++)
+    for (unsigned int i = 0; i < lines.size(); ++i)
     {
         if (lines[i][0] < 2 && lines[i][2] < 2)
         {
@@ -194,10 +194,10 @@ void simplify_lines(cv::Mat image, std::vector<cv::Vec4i>& lines)
 
 void pick_lines(std::vector<cv::Vec4i>& lines)
 {
-    for (unsigned int i = 0; i < lines.size(); i++)
+    for (unsigned int i = 0; i < lines.size(); ++i)
     {
         bool have = false;
-        for (unsigned int j = i + 1; j < lines.size(); j++)
+        for (unsigned int j = i + 1; j < lines.size(); ++j)
         {
             float cos_two_lines = get_cos_two_lines(cv::Point(lines[i][0], lines[i][1]), cv::Point(lines[i][2], lines[i][3]), cv::Point(lines[j][0], lines[j][1]), cv::Point(lines[j][2], lines[j][3]));
 
