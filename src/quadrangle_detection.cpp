@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 void detect_quadrangles(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
 {
     cv::Mat hsv_image;
-    cv::cvtColor(image, hsv_image, CV_BGR2HSV);
+    cv::cvtColor(image, hsv_image, cv::COLOR_BGR2HSV);
 
     ///Use hue channel
     cv::Mat hue_image;
@@ -82,13 +82,13 @@ void detect_quadrangles(cv::Mat image, std::vector<cv::Vec8i>& quadrangles)
     cv::mixChannels(&hsv_image, 1, &hue_image, 1, from_to, 1);
 
     ///threshold and close hue channel
-    cv::threshold(hue_image, hue_image, 70, 255, CV_THRESH_BINARY);
+    cv::threshold(hue_image, hue_image, 70, 255, cv::THRESH_BINARY);
     cv::dilate(hue_image, hue_image, cv::Mat(), cv::Point(-1, -1), 2, 1, 1);
     cv::erode(hue_image, hue_image, cv::Mat(), cv::Point(-1, -1), 2, 1, 1);
 
     ///Find contours of hue channel
     std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(hue_image, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    cv::findContours(hue_image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
     ///Remove noise contours
     simplify_contours(2000, contours);
